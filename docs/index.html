@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Debug Completo - reCAPTCHA v3</title>
     <script src="https://www.google.com/recaptcha/api.js?render=6LcV474tAAAAANTyOdTptREgDpWFqrpS_iCVWGP1"></script>
-    
+
     <style>
         :root {
             --bg-color: #f4f4f9;
@@ -27,7 +27,7 @@
         .btn-danger { background-color: #dc3545; }
         .btn-danger:hover { background-color: #c82333; }
         textarea { width: 100%; box-sizing: border-box; padding: 10px; border: 1px solid var(--border-color); border-radius: 4px; font-family: monospace; resize: vertical; }
-        
+
         #console-output { background-color: var(--console-bg); color: var(--console-text); padding: 15px; border-radius: 8px; height: 600px; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 13px; }
         .log-info { color: #fff; }
         .log-success { color: #00ff00; }
@@ -70,10 +70,17 @@
             <div class="alert-box">
                 <strong>⚠️ Nota de CORS:</strong> Para que este botón funcione, necesitas activar una extensión en tu navegador que permita peticiones CORS (ej: "Allow CORS"), de lo contrario Google bloqueará la petición desde este HTML.
             </div>
-            
+
             <div class="form-group">
                 <label>Secret Key (Privada):</label>
                 <input type="password" id="secretKey" placeholder="Ingresa tu Secret Key aquí para validar">
+            </div>
+            <div class="form-group">
+                <label>Remote IP (opcional):</label>
+                <input type="text" id="remoteIp" placeholder="IP del sitio/usuario (opcional)">
+            </div>
+            <div class="form-group">
+                <label><input type="checkbox" id="autoValidar" checked style="width:auto; margin-right:6px;">Validar automáticamente al generar el token</label>
             </div>
 
             <button id="btnValidar" class="btn-danger" onclick="validarTokenGoogle()">🔍 Simular POST a Google</button>
@@ -91,11 +98,11 @@
         const SITE_KEY = "6LcV474tAAAAANTyOdTptREgDpWFqrpS_iCVWGP1";
         let timerExpiracion = null;
         const consolaUI = document.getElementById("console-output");
-        
+
         function escribirLog(mensaje, tipo = 'info', extraData = null) {
             const linea = document.createElement("div");
             const tiempo = new Date().toLocaleTimeString() + "." + new Date().getMilliseconds().toString().padStart(3, '0');
-            
+
             let claseColor = "log-info";
             if(tipo === 'success') claseColor = "log-success";
             if(tipo === 'warn') claseColor = "log-warn";
@@ -103,7 +110,7 @@
 
             linea.className = claseColor;
             linea.innerHTML = `<span class="timestamp">[${tiempo}]</span> ${mensaje}`;
-            
+
             if (extraData) {
                 const dataDiv = document.createElement("div");
                 dataDiv.className = "log-json";
@@ -118,7 +125,7 @@
             const accion = document.getElementById("actionName").value || "test";
             const btnGenerar = document.getElementById("btnGenerar");
             const statusIndicator = document.getElementById("statusIndicator");
-            
+
             escribirLog(`[FRONTEND] Solicitando token. Action: '${accion}'`, 'info');
             btnGenerar.disabled = true;
             document.getElementById("token").value = "";
@@ -130,15 +137,19 @@
                 grecaptcha.execute(SITE_KEY, { action: accion })
                 .then(function(token) {
                     const duracion = (performance.now() - startTime).toFixed(2);
-                    
+
                     escribirLog(`[FRONTEND] Token generado (${duracion} ms)`, 'success');
                     document.getElementById("token").value = token;
                     document.getElementById("tokenMetricas").textContent = `(Expira en 120s)`;
-                    
+
                     statusIndicator.textContent = "Token Listo";
                     statusIndicator.style.background = "#00ff00";
-                    
+
                     iniciarCuentaRegresiva();
+
+                    if (document.getElementById("autoValidar").checked) {
+                        validarTokenGoogle();
+                    }
                 })
                 .catch(function(error) {
                     escribirLog(`[FRONTEND] Error: ${error.message || error}`, 'error');
@@ -152,6 +163,7 @@
         async function validarTokenGoogle() {
             const secret = document.getElementById("secretKey").value.trim();
             const token = document.getElementById("token").value.trim();
+            const remoteIp = document.getElementById("remoteIp").value.trim();
             const btnValidar = document.getElementById("btnValidar");
 
             if (!secret) return escribirLog("[BACKEND] Error: Necesitas ingresar tu Secret Key.", 'warn');
@@ -164,6 +176,7 @@
             const params = new URLSearchParams();
             params.append('secret', secret);
             params.append('response', token);
+            if (remoteIp) params.append('remoteip', remoteIp);
 
             try {
                 const response = await fetch(url, {
@@ -173,7 +186,7 @@
                 });
 
                 const data = await response.json();
-                
+
                 if (data.success) {
                     escribirLog(`[BACKEND] ✅ Validación exitosa. Score: ${data.score} | Action: ${data.action}`, 'success', data);
                 } else {
@@ -189,7 +202,7 @@
         }
 
         function iniciarCuentaRegresiva() {
-            let tiempoRestante = 120; 
+            let tiempoRestante = 120;
             const metricas = document.getElementById("tokenMetricas");
 
             timerExpiracion = setInterval(() => {
