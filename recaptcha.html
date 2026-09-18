@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Generador Token reCAPTCHA v3</title>
+
+    <script src="https://www.google.com/recaptcha/api.js?render=6LcV474tAAAAANTyOdTptREgDpWFqrpS_iCVWGP1"></script>
+</head>
+
+<body>
+
+    <h2>Generador Token Google reCAPTCHA v3</h2>
+
+    <button onclick="generarToken()">
+        Generar Token
+    </button>
+
+    <br><br>
+
+    <textarea
+        id="token"
+        rows="12"
+        cols="120"
+        placeholder="Aquí aparecerá el token generado..."
+        readonly>
+    </textarea>
+
+    <br><br>
+
+    <button onclick="copiarToken()">
+        Copiar Token
+    </button>
+
+    <script>
+
+        const SITE_KEY = "6LcV474tAAAAANTyOdTptREgDpWFqrpS_iCVWGP1";
+
+        function generarToken() {
+
+            grecaptcha.ready(function () {
+
+                grecaptcha.execute(
+                    SITE_KEY,
+                    {
+                        action: "login"
+                    }
+                )
+                .then(function(token) {
+
+                    console.log("Token generado:");
+                    console.log(token);
+
+                    document.getElementById("token").value = token;
+
+                })
+                .catch(function(error) {
+
+                    console.error("Error generando token:", error);
+
+                });
+
+            });
+        }
+
+        function copiarToken() {
+
+            const token = document.getElementById("token").value;
+
+            navigator.clipboard.writeText(token)
+                .then(() => {
+                    alert("Token copiado al portapapeles");
+                });
+
+        }
+
+    </script>
+
+</body>
+</html>
